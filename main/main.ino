@@ -1,7 +1,6 @@
 /*
    1 : LED
    4 : water pump
-   12 : humidifier
    3 : DHT
    2 : heater
    A0 : soil moisture
@@ -10,14 +9,19 @@
 
 */
 
-#include <DHT11.h>
+#include "DHT.h"
 
-int rad = 0;
-float temp = 0;
-float humi = 0;
-int soi = 0;
+#define DHTPIN 3     // what digital pin we're connected to
+#define DHTTYPE DHT11   // DHT 11
+
+
 String command;
-DHT11 dht11(3);
+float h;
+float t;
+String soil;
+String rad;
+DHT dht(DHTPIN, DHTTYPE);
+
 
 void setup() {
   
@@ -27,7 +31,7 @@ pinMode(4, OUTPUT);
 pinMode(12, OUTPUT);
 pinMode(2, OUTPUT);
 
-
+  dht.begin();
   Serial.begin(9600);
 }
 
@@ -47,36 +51,32 @@ void loop() {
     else if (command == "H0") {
       digitalWrite(2, LOW);
     }
-    else if (command == "U1") {
-      digitalWrite(12, HIGH);
-    }
-    else if (command == "U0") {
-      digitalWrite(12, LOW);
-    }
     else if (command == "L1") {
       digitalWrite(1, HIGH);
     }
     else if (command == "L0") {
       digitalWrite(1, LOW);
     }
-
-    else if (command == "DHT") {
-      String s1;
-      dht11.read(humi, temp);
-      delay(DHT11_RETRY_DELAY); //온도
-      sprintf(s1.c_str(), "DHT:temp%.2fhum%.2f", temp,humi);
-      Serial.write(s1.c_str());
-
-    }
-    else if (command == "Soi") {
-      soi = analogRead(0); //토양센서
-      Serial.write("Soi:" + soi);
-    }
-    else if (command == "Rad") {
-      rad = analogRead(1); //빛센서
-      Serial.write("Rad:" + rad);
-    }
+    else if (command == "data") {
+      delay(1000);
+      h = dht.readHumidity();
+      t = dht.readTemperature();
+      
+      if(analogRead(A0)<=999){
+        soil="0"+String(analogRead(A0));
+      }
+      else{
+        soil=String(analogRead(A0));
+      }
+      if(analogRead(A1)<=999){
+        rad="0"+String(analogRead(A1));
+      }else{
+        rad=String(analogRead(A1));
+      }
+      Serial.println(String(dht.computeHeatIndex(t, h, false))+String(h)+soil+rad+";");
+      Serial.flush();
+    } 
   }
-
-
 }
+
+
